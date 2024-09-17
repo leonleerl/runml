@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[]) {
 	int x = 8;
-	int y = 3;
+	double y = 3.555000;
 	if ((x * y) == (int)(x * y)) {
 		printf("%d\n", (int)(x * y));
 	} else {

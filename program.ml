@@ -1,4 +1,4 @@
-# 24 is printed
-x <- 8
-y <- 3
-print x * y
+function printsum a b
+    c <- 321
+    print a + b + c
+printsum (12, 6)

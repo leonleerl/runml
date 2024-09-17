@@ -23,6 +23,92 @@ typedef struct
     int parameterCount;
 } FunctionStatement;
 
+int isFirstWord(const char *str, char *target);
+int firstFourCharsAreWhitespace(const char *str);
+int isFunctionInvoke(char *str);
+void doAssignValue(char *token, char buffer[1024], FILE *outputFile);
+void doPrintValue(char *token, char buffer[1024], FILE *outputFile);
+void doFunctionName(char *token, char buffer[1024], FILE *outputFile);
+void doFunctionBody(char *token, char buffer[1024], FILE *outputFile);
+
+int main(int argc, char *argv[])
+{
+    // if (argc < 2)
+    // {
+    //     printf("必须要有一个文件输入\n");
+    //     return EXIT_FAILURE;
+    // }
+
+    // FILE *programFile = fopen(argv[1], "r");
+    FILE *programFile = fopen("./program.ml", "r");
+    FILE *tempFile = fopen("./temp.c", "w");
+    FILE *toolsFile = fopen("./tools.h", "w");
+    char buffer[1024];
+    char *token = "";
+    int isInFunction = 0;
+    fputs("#include <stdio.h>\n\n", tempFile);
+    fputs("int main(int argc, char *argv[]) {\n", tempFile);
+
+    while (fgets(buffer, sizeof(buffer), programFile))
+    {
+
+        // 跳过注释行
+        if (buffer[0] == '#')
+        {
+            continue;
+        }
+
+        // 执行function里面的语句
+        if (isInFunction && (firstFourCharsAreWhitespace(buffer) || buffer[0] == '\t'))
+        {
+            doFunctionBody(token, buffer, toolsFile);
+        }
+        // 判断是否function结束
+        else if (isInFunction == 1 && !firstFourCharsAreWhitespace(buffer) && buffer[0] != '\t')
+        {
+            fprintf(toolsFile, "%s", "}\n");
+            isInFunction = 0;
+        }
+        // 判断是否是函数调用语句
+        else if (isFunctionInvoke(buffer))
+        {
+            fprintf(tempFile, "%s", buffer);
+        }
+
+        // 解析 <- 赋值行
+        else if (strstr(buffer, "<-"))
+        {
+            isInFunction = 0;
+            doAssignValue(token, buffer, tempFile);
+        }
+
+        // 解析 print 语句
+        else if (isFirstWord(buffer, "print") && strstr(buffer, "print"))
+        {
+            isInFunction = 0;
+            doPrintValue(token, buffer, tempFile);
+        }
+
+        // 解析 function 语句
+        else if (isFirstWord(buffer, "function") && strstr(buffer, "function"))
+        {
+            isInFunction = 1;
+            doFunctionName(token, buffer, toolsFile);
+        }
+    }
+
+    fputs("\treturn 0;\n", tempFile);
+    fputs("}\n", tempFile);
+
+    fclose(programFile);
+    fclose(tempFile);
+    fclose(toolsFile);
+
+    system("gcc temp.c -o temp");
+    system("./temp");
+
+    return EXIT_SUCCESS;
+}
 int isFirstWord(const char *str, char *target)
 {
     char firstWord[1024]; // 存储第一个单词
@@ -60,143 +146,103 @@ int firstFourCharsAreWhitespace(const char *str)
     return 1;
 }
 
-int main(int argc, char *argv[])
+int isFunctionInvoke(char *str)
 {
-    // if (argc < 2)
-    // {
-    //     printf("必须要有一个文件输入\n");
-    //     return EXIT_FAILURE;
-    // }
-
-    // FILE *programFile = fopen(argv[1], "r");
-    FILE *programFile = fopen("./program.ml", "r");
-    FILE *tempFile = fopen("./temp.c", "w");
-    FILE *toolsFile = fopen("./tools.h", "w");
-    char buffer[1024];
-    char *token;
-    int isInFunction = 0;
-    fputs("#include <stdio.h>\n\n", tempFile);
-    fputs("int main(int argc, char *argv[]) {\n", tempFile);
-
-    while (fgets(buffer, sizeof(buffer), programFile))
+    // 分别检查字符 '('、',' 和 ')' 是否存在
+    if (strchr(str, '(') != NULL && strchr(str, ',') != NULL && strchr(str, ')') != NULL)
     {
+        return 1; // 如果都存在，返回 true (1)
+    }
+    return 0; // 如果有一个不存在，返回 false (0)
+}
 
-        // 跳过注释行
-        if (buffer[0] == '#')
+void doAssignValue(char *token, char buffer[1024], FILE *outputFile)
+{
+    Statement stat;
+    token = strtok(buffer, " ");
+    if (token)
+    {
+        strcpy(stat.x, token);
+        token = strtok(NULL, " ");
+    }
+    if (token)
+    {
+        strcpy(stat.operator, token);
+        token = strtok(NULL, " ");
+    }
+    if (token)
+    {
+        if (strchr(token, '.'))
         {
-            continue;
+            stat.DataType.DataTypeDouble = atof(token);
+            fprintf(outputFile, "\tdouble %s = %f;\n", stat.x, stat.DataType.DataTypeDouble);
         }
-
-        if (isInFunction && (firstFourCharsAreWhitespace(buffer) || buffer[0] == '\t'))
+        else
         {
-            printf("Hello World");
+            stat.DataType.DataTypeInt = atoi(token);
+            fprintf(outputFile, "\tint %s = %d;\n", stat.x, stat.DataType.DataTypeInt);
         }
+        token = strtok(NULL, " ");
+    }
+}
 
-        // 解析 <- 赋值行
-        else if (strstr(buffer, "<-"))
-        {
-            isInFunction = 0;
-            Statement stat;
-            token = strtok(buffer, " ");
-            if (token)
-            {
-                strcpy(stat.x, token);
-                token = strtok(NULL, " ");
-            }
-            if (token)
-            {
-                strcpy(stat.operator, token);
-                token = strtok(NULL, " ");
-            }
-            if (token)
-            {
-                if (strchr(token, '.'))
-                {
-                    stat.DataType.DataTypeDouble = atof(token);
-                    fprintf(tempFile, "\tdouble %s = %f;\n", stat.x, stat.DataType.DataTypeDouble);
-                }
-                else
-                {
-                    stat.DataType.DataTypeInt = atoi(token);
-                    fprintf(tempFile, "\tint %s = %d;\n", stat.x, stat.DataType.DataTypeInt);
-                }
-                token = strtok(NULL, " ");
-            }
-        }
+void doPrintValue(char *token, char buffer[1024], FILE *outputFile)
+{
+    token = strtok(buffer, " ");
+    char *x = strtok(NULL, "");
+    if (x)
+    {
+        fprintf(outputFile,
+                "\tif ((%s) == (int)(%s)) {\n"
+                "\t\tprintf(\"%%d\\n\", (int)(%s));\n"
+                "\t} else {\n"
+                "\t\tprintf(\"%%.6f\\n\", (double)(%s));\n"
+                "\t}\n",
+                x, x, x, x);
+    }
+}
 
-        // 解析 print 语句
-        else if (isFirstWord(buffer, "print") && strstr(buffer, "print"))
-        {
-            isInFunction = 0;
-            token = strtok(buffer, " ");
-            char *x = strtok(NULL, "");
-            if (x)
-            {
-                fprintf(tempFile,
-                        "\tif ((%s) == (int)(%s)) {\n"
-                        "\t\tprintf(\"%%d\\n\", (int)(%s));\n"
-                        "\t} else {\n"
-                        "\t\tprintf(\"%%.6f\\n\", (double)(%s));\n"
-                        "\t}\n",
-                        x, x, x, x);
-            }
-        }
+void doFunctionName(char *token, char buffer[1024], FILE *outputFile)
+{
 
-        // 解析 function 语句
-        else if (isFirstWord(buffer, "function") && strstr(buffer, "function"))
-        {
-            isInFunction = 1;
-            printf("进入函数了!\n"); // 用于调试的输出
-            FunctionStatement funcStat;
-            funcStat.parameterCount = 0;
+    printf("进入函数了!\n"); // 用于调试的输出
+    FunctionStatement funcStat;
+    funcStat.parameterCount = 0;
 
-            // 分析函数名和参数
-            token = strtok(buffer, " ");
-            token = strtok(NULL, " "); // 获取函数名
-            strcpy(funcStat.functionName, token);
+    // 分析函数名和参数
+    token = strtok(buffer, " ");
+    token = strtok(NULL, " "); // 获取函数名
+    strcpy(funcStat.functionName, token);
 
-            // 获取参数
-            while ((token = strtok(NULL, " ")) != NULL)
-            {
-                strcpy(funcStat.parameters[funcStat.parameterCount], token);
-                funcStat.parameterCount++;
-            }
-
-            // 在 tools.h 中生成函数声明
-            fprintf(toolsFile, "int %s(", funcStat.functionName);
-            for (int i = 0; i < funcStat.parameterCount; i++)
-            {
-                fprintf(toolsFile, "int %s", funcStat.parameters[i]);
-                if (i < funcStat.parameterCount - 1)
-                {
-                    fprintf(toolsFile, ", ");
-                }
-            }
-            fprintf(toolsFile, "){\n");
-
-            // // 在 temp.c 中插入函数调用
-            // fprintf(tempFile, "\t%s(", funcStat.functionName);
-            // for (int i = 0; i < funcStat.parameterCount; i++)
-            // {
-            //     fprintf(tempFile, "%s", funcStat.parameters[i]);
-            //     if (i < funcStat.parameterCount - 1)
-            //     {
-            //         fprintf(tempFile, ", ");
-            //     }
-            // }
-            // fprintf(tempFile, ");\n");
-        }
+    // 获取参数
+    while ((token = strtok(NULL, " ")) != NULL)
+    {
+        strcpy(funcStat.parameters[funcStat.parameterCount], token);
+        funcStat.parameterCount++;
     }
 
-    fputs("\treturn 0;\n", tempFile);
-    fputs("}\n", tempFile);
+    // 在 tools.h 中生成函数声明
+    fprintf(outputFile, "int %s(", funcStat.functionName);
+    for (int i = 0; i < funcStat.parameterCount; i++)
+    {
+        fprintf(outputFile, "int %s", funcStat.parameters[i]);
+        if (i < funcStat.parameterCount - 1)
+        {
+            fprintf(outputFile, ", ");
+        }
+    }
+    fprintf(outputFile, "){\n");
+}
 
-    fclose(programFile);
-    fclose(tempFile);
-    fclose(toolsFile);
-
-    system("gcc temp.c -o temp");
-    system("./temp");
-
-    return EXIT_SUCCESS;
+void doFunctionBody(char *token, char buffer[1024], FILE *outputFile)
+{
+    printf("%s", buffer);
+    if (strstr(buffer, "<-"))
+    {
+        doAssignValue(token, buffer, outputFile);
+    }
+    else if ((firstFourCharsAreWhitespace(buffer) || buffer[0] == '\t') && strstr(buffer, "print"))
+    {
+        doPrintValue(token, buffer, outputFile);
+    }
 }

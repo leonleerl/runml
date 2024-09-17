@@ -1,5 +1,6 @@
 #include <stdio.h>
+#include "tools.h"
 
 int main(int argc, char *argv[]) {
-	return 0;
+printsum (12, 6);	return 0;
 }

@@ -46,7 +46,8 @@ int main(int argc, char *argv[])
     char buffer[1024];
     char *token = "";
     int isInFunction = 0;
-    fputs("#include <stdio.h>\n\n", tempFile);
+    fputs("#include <stdio.h>\n", tempFile);
+    fputs("#include \"tools.h\"\n\n", tempFile);
     fputs("int main(int argc, char *argv[]) {\n", tempFile);
 
     while (fgets(buffer, sizeof(buffer), programFile))
@@ -64,15 +65,15 @@ int main(int argc, char *argv[])
             doFunctionBody(token, buffer, toolsFile);
         }
         // 判断是否function结束
-        else if (isInFunction == 1 && !firstFourCharsAreWhitespace(buffer) && buffer[0] != '\t')
+        if (isInFunction == 1 && !firstFourCharsAreWhitespace(buffer) && buffer[0] != '\t')
         {
             fprintf(toolsFile, "%s", "}\n");
             isInFunction = 0;
         }
         // 判断是否是函数调用语句
-        else if (isFunctionInvoke(buffer))
+        if (isFunctionInvoke(buffer))
         {
-            fprintf(tempFile, "%s", buffer);
+            fprintf(tempFile, "%s;", buffer);
         }
 
         // 解析 <- 赋值行

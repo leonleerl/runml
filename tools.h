@@ -1,13 +1,12 @@
 int printsum(int a, int b
 ){
-	int c = 321;
-	if ((a + b + c
-) == (int)(a + b + c
+	if ((a + b
+) == (int)(a + b
 )) {
-		printf("%d\n", (int)(a + b + c
+		printf("%d\n", (int)(a + b
 ));
 	} else {
-		printf("%.6f\n", (double)(a + b + c
+		printf("%.6f\n", (double)(a + b
 ));
 	}
 }

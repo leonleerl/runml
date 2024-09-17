@@ -1,4 +1,6 @@
-function printsum a b
-    c <- 321
-    print a + b + c
-printsum (12, 6)
+# 72 is printed
+#
+function multiply a b
+	return a * b
+#
+print multiply(12, 6)

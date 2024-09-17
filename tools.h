@@ -1,0 +1,1 @@
+int  qכל(int , int ){

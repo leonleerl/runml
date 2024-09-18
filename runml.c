@@ -26,6 +26,8 @@ typedef struct
 int isFirstWord(const char *str, char *target);
 int firstFourCharsAreWhitespace(const char *str);
 int isFunctionInvoke(char *str);
+int containsDigit(char *str);
+
 void doAssignValue(char *token, char buffer[1024], FILE *outputFile);
 void doPrintValue(char *token, char buffer[1024], FILE *outputFile);
 void doFunctionName(char *token, char buffer[1024], FILE *outputFile);
@@ -73,7 +75,18 @@ int main(int argc, char *argv[])
         // 判断是否是函数调用语句
         if (isFunctionInvoke(buffer))
         {
-            fprintf(tempFile, "%s;", buffer);
+            // 1.是print multiply(12, 6)
+            if (strncmp(buffer, "print ", 6) == 0)
+            {
+                char *invokeString = strstr(buffer, "print ");
+                invokeString += strlen("print ");
+                fprintf(tempFile, "printf(\"%%d\\n\",%s);\n", invokeString);
+            }
+            // 2.是printsum (12, 6)
+            else
+            {
+                fprintf(tempFile, "%s;\n", buffer);
+            }
         }
 
         // 解析 <- 赋值行
@@ -110,6 +123,7 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
+
 int isFirstWord(const char *str, char *target)
 {
     char firstWord[1024]; // 存储第一个单词
@@ -157,10 +171,30 @@ int isFunctionInvoke(char *str)
     return 0; // 如果有一个不存在，返回 false (0)
 }
 
+int containsDigit(char *str)
+{
+    while (*str)
+    {
+        if (isdigit(*str)) // 判断当前字符是否为数字
+        {
+            return 1; // 如果找到数字，返回1
+        }
+        str++;
+    }
+    return 0; // 如果没有找到数字，返回0
+}
+
 void doAssignValue(char *token, char buffer[1024], FILE *outputFile)
 {
     Statement stat;
-    token = strtok(buffer, " ");
+    char tempBuffer[1024];
+    strcpy(tempBuffer, buffer);
+    char *ptr = buffer;
+    if (*ptr == '\t')
+    {
+        ptr++;
+    }
+    token = strtok(ptr, " ");
     if (token)
     {
         strcpy(stat.x, token);
@@ -173,7 +207,26 @@ void doAssignValue(char *token, char buffer[1024], FILE *outputFile)
     }
     if (token)
     {
-        if (strchr(token, '.'))
+        // 如果是一个变量给x赋值，x <- a * b， 例如token是a * b
+        if (!containsDigit(token))
+        {
+            // 查找 "<- " 的位置
+            char *tempToken = strstr(tempBuffer, "<- ");
+            if (tempToken != NULL)
+            {
+                // 移动指针到 "<- " 之后的字符
+                tempToken += strlen("<- ");
+
+                // 将 "<- " 后面的内容复制到 variable
+                char variable[1024];
+                strcpy(variable, tempToken); // 复制 "a * b" 到 variable
+
+                // 输出到文件
+                fprintf(outputFile, "\tint %s = %s;\n", stat.x, variable);
+            }
+        }
+
+        else if (strchr(token, '.'))
         {
             stat.DataType.DataTypeDouble = atof(token);
             fprintf(outputFile, "\tdouble %s = %f;\n", stat.x, stat.DataType.DataTypeDouble);
@@ -198,15 +251,15 @@ void doPrintValue(char *token, char buffer[1024], FILE *outputFile)
                 "\t\tprintf(\"%%d\\n\", (int)(%s));\n"
                 "\t} else {\n"
                 "\t\tprintf(\"%%.6f\\n\", (double)(%s));\n"
-                "\t}\n",
-                x, x, x, x);
+                "\t}\n"
+                "return 0;\n ",
+                x,
+                x, x, x);
     }
 }
 
 void doFunctionName(char *token, char buffer[1024], FILE *outputFile)
 {
-
-    printf("进入函数了!\n"); // 用于调试的输出
     FunctionStatement funcStat;
     funcStat.parameterCount = 0;
 
@@ -237,7 +290,12 @@ void doFunctionName(char *token, char buffer[1024], FILE *outputFile)
 
 void doFunctionBody(char *token, char buffer[1024], FILE *outputFile)
 {
-    printf("%s", buffer);
+    // 这一句是return
+    if (strstr(buffer, "return"))
+    {
+        fprintf(outputFile, "%s;", buffer);
+        return;
+    }
     if (strstr(buffer, "<-"))
     {
         doAssignValue(token, buffer, outputFile);

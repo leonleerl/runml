@@ -1,6 +1,8 @@
-# 72 is printed
+# 9 is printed
 #
-function multiply a b
-	return a * b
+one <- 1
 #
-print multiply(12, 6)
+function increment value
+	return value + one
+#
+print increment(3) + increment(4)

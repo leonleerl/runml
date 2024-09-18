@@ -1,3 +1,7 @@
+//  CITS2002 Project 1 2024
+//  Student1:   24169259   Leon Li
+//  Platform:   Linux  (or Apple)
+
 #include <stdio.h>
 union DataType
 {

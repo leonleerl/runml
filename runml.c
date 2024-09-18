@@ -1,3 +1,7 @@
+//  CITS2002 Project 1 2024
+//  Student1:   24169259   Leon Li
+//  Platform:   Linux  (or Apple)
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -6,14 +10,14 @@
 
 int main(int argc, char *argv[])
 {
-    // if (argc < 2)
-    // {
-    //     printf("必须要有一个文件输入\n");
-    //     return EXIT_FAILURE;
-    // }
+    if (argc < 2)
+    {
+        printf("必须要有一个文件输入\n");
+        return EXIT_FAILURE;
+    }
 
-    // FILE *programFile = fopen(argv[1], "r");
-    FILE *programFile = fopen("./program.ml", "r");
+    FILE *programFile = fopen(argv[1], "r");
+    // FILE *programFile = fopen("./program.ml", "r");
     FILE *tempFile = fopen("./temp.c", "w");
     FILE *tempHFile = fopen("./temp.h", "w");
     char buffer[1024];
@@ -37,12 +41,14 @@ int main(int argc, char *argv[])
         {
             doFunctionBody(token, buffer, tempHFile);
         }
+
         // 判断是否function结束
         if (isInFunction == 1 && !firstFourCharsAreWhitespace(buffer) && buffer[0] != '\t')
         {
             fprintf(tempHFile, "%s", "}\n");
             isInFunction = 0;
         }
+
         // 判断是否是函数调用语句
         if (isFunctionInvoke(buffer))
         {
@@ -64,7 +70,7 @@ int main(int argc, char *argv[])
         else if (strstr(buffer, "<-"))
         {
             isInFunction = 0;
-            doAssignValue(token, buffer, tempFile);
+            doAssignValue(token, buffer, tempHFile);
         }
 
         // 解析 print 语句
@@ -91,7 +97,9 @@ int main(int argc, char *argv[])
 
     system("gcc temp.c -o temp");
     system("./temp");
-
+    // system("rm -rf temp");
+    // system("rm -rf temp.c");
+    // system("rm -rf temp.h");
     return EXIT_SUCCESS;
 }
 
@@ -200,12 +208,12 @@ void doAssignValue(char *token, char buffer[1024], FILE *outputFile)
         else if (strchr(token, '.'))
         {
             stat.DataType.DataTypeDouble = atof(token);
-            fprintf(outputFile, "\tdouble %s = %f;\n", stat.x, stat.DataType.DataTypeDouble);
+            fprintf(outputFile, "\tconst double %s = %f;\n", stat.x, stat.DataType.DataTypeDouble);
         }
         else
         {
             stat.DataType.DataTypeInt = atoi(token);
-            fprintf(outputFile, "\tint %s = %d;\n", stat.x, stat.DataType.DataTypeInt);
+            fprintf(outputFile, "\tconst int %s = %d;\n", stat.x, stat.DataType.DataTypeInt);
         }
         token = strtok(NULL, " ");
     }

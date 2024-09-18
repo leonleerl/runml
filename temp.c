@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "tools.h"
+#include "temp.h"
+
 int main(int argc, char *argv[])
 {
 	int one = 1;

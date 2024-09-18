@@ -2,36 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-union DataType
-{
-    double DataTypeDouble;
-    int DataTypeInt;
-};
-
-typedef struct
-{
-    char x[1024];
-    char operator[3];
-    union DataType DataType;
-} Statement;
-
-typedef struct
-{
-    char parameters[1024][1024];
-    char functionName[1024];
-    int parameterCount;
-} FunctionStatement;
-
-int isFirstWord(const char *str, char *target);
-int firstFourCharsAreWhitespace(const char *str);
-int isFunctionInvoke(char *str);
-int containsDigit(char *str);
-
-void doAssignValue(char *token, char buffer[1024], FILE *outputFile);
-void doPrintValue(char *token, char buffer[1024], FILE *outputFile);
-void doFunctionName(char *token, char buffer[1024], FILE *outputFile);
-void doFunctionBody(char *token, char buffer[1024], FILE *outputFile);
+#include "runml.h"
 
 int main(int argc, char *argv[])
 {
@@ -44,12 +15,12 @@ int main(int argc, char *argv[])
     // FILE *programFile = fopen(argv[1], "r");
     FILE *programFile = fopen("./program.ml", "r");
     FILE *tempFile = fopen("./temp.c", "w");
-    FILE *toolsFile = fopen("./tools.h", "w");
+    FILE *tempHFile = fopen("./temp.h", "w");
     char buffer[1024];
     char *token = "";
     int isInFunction = 0;
     fputs("#include <stdio.h>\n", tempFile);
-    fputs("#include \"tools.h\"\n\n", tempFile);
+    fputs("#include \"temp.h\"\n\n", tempFile);
     fputs("int main(int argc, char *argv[]) {\n", tempFile);
 
     while (fgets(buffer, sizeof(buffer), programFile))
@@ -64,12 +35,12 @@ int main(int argc, char *argv[])
         // 执行function里面的语句
         if (isInFunction && (firstFourCharsAreWhitespace(buffer) || buffer[0] == '\t'))
         {
-            doFunctionBody(token, buffer, toolsFile);
+            doFunctionBody(token, buffer, tempHFile);
         }
         // 判断是否function结束
         if (isInFunction == 1 && !firstFourCharsAreWhitespace(buffer) && buffer[0] != '\t')
         {
-            fprintf(toolsFile, "%s", "}\n");
+            fprintf(tempHFile, "%s", "}\n");
             isInFunction = 0;
         }
         // 判断是否是函数调用语句
@@ -107,7 +78,7 @@ int main(int argc, char *argv[])
         else if (isFirstWord(buffer, "function") && strstr(buffer, "function"))
         {
             isInFunction = 1;
-            doFunctionName(token, buffer, toolsFile);
+            doFunctionName(token, buffer, tempHFile);
         }
     }
 
@@ -116,7 +87,7 @@ int main(int argc, char *argv[])
 
     fclose(programFile);
     fclose(tempFile);
-    fclose(toolsFile);
+    fclose(tempHFile);
 
     system("gcc temp.c -o temp");
     system("./temp");
@@ -124,7 +95,7 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-int isFirstWord(const char *str, char *target)
+int isFirstWord(const char *str, const char *target)
 {
     char firstWord[1024]; // 存储第一个单词
     int i = 0;
@@ -161,7 +132,7 @@ int firstFourCharsAreWhitespace(const char *str)
     return 1;
 }
 
-int isFunctionInvoke(char *str)
+int isFunctionInvoke(const char *str)
 {
     // 分别检查字符 '('、',' 和 ')' 是否存在
     if (strchr(str, '(') != NULL && strchr(str, ',') != NULL && strchr(str, ')') != NULL)
@@ -171,7 +142,7 @@ int isFunctionInvoke(char *str)
     return 0; // 如果有一个不存在，返回 false (0)
 }
 
-int containsDigit(char *str)
+int containsDigit(const char *str)
 {
     while (*str)
     {
@@ -275,7 +246,7 @@ void doFunctionName(char *token, char buffer[1024], FILE *outputFile)
         funcStat.parameterCount++;
     }
 
-    // 在 tools.h 中生成函数声明
+    // 在 temp.h 中生成函数声明
     fprintf(outputFile, "int %s(", funcStat.functionName);
     for (int i = 0; i < funcStat.parameterCount; i++)
     {

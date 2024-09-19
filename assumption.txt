@@ -1,0 +1,19 @@
+1. If no parameters are provided, the program should default to normal execution mode and only output the result of the print statement. For example: ./runml program.ml.
+
+2. If the first argument is 1, the program should enter debug mode. For example: "./runml program.ml 1".
+
+3. Assume there is no division by zero in the program.
+
+4. Assume that the name of the variable will not be assigned more than once.
+
+5. Assume that all function parameters are of type int, and the return value is also of type int.
+
+6. When the program encounters an invalid line during translation, it should output a message starting with ! in the command line and exit without executing further.
+
+7. Assume that functions do not contain nested functions.
+
+8. Assume that all lines inside a function start with a tab character (\t).
+
+9. In a comment line, # must be the first character of the line.
+
+10. No line can exceed 1024 bytes.
